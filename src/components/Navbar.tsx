@@ -4,6 +4,7 @@ import { BookOpen, LogOut, LayoutDashboard, User as UserIcon, Upload, Heart, Bar
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface NavbarProps {
   user: any;
@@ -75,6 +76,7 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
                     <span className="hidden sm:inline">Profil</span>
                   </Link>
                 </Button>
+                <ThemeToggle />
                 <Button variant="ghost" onClick={handleLogout} className="flex items-center gap-2">
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Déconnexion</span>

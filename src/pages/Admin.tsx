@@ -111,18 +111,24 @@ const Admin = () => {
         .order("borrowed_at", { ascending: false });
 
       if (!error && data) {
+        console.log("Borrowings fetched:", data);
         setBorrowings(data);
+      } else if (error) {
+        console.error("Error fetching borrowings:", error);
       }
     };
 
     const fetchUsers = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*, user_roles (role)")
+        .select("*, user_roles (id, role)")
         .order("created_at", { ascending: false });
 
       if (!error && data) {
+        console.log("Users fetched:", data);
         setUsers(data);
+      } else if (error) {
+        console.error("Error fetching users:", error);
       }
     };
 
