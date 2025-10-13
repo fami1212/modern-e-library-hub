@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trash2, Edit, Plus, Users, Library, Download } from "lucide-react";
+import { BookOpen, Trash2, Edit, Plus, Users, Library, Download, MessageSquare } from "lucide-react";
 import { exportToCSV, exportToPDF } from "@/utils/exportUtils";
 import {
   Table,
@@ -37,6 +37,7 @@ const Admin = () => {
   const [books, setBooks] = useState<any[]>([]);
   const [borrowings, setBorrowings] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -136,8 +137,24 @@ const Admin = () => {
     if (isAdmin) {
       fetchBorrowings();
       fetchUsers();
+      fetchConversations();
     }
   }, [isAdmin]);
+
+  const fetchConversations = async () => {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*, profiles (full_name, email)")
+      .order("updated_at", { ascending: false });
+
+    console.log("Conversations fetched:", data, "Error:", error);
+
+    if (!error && data) {
+      setConversations(data);
+    } else if (error) {
+      console.error("Error fetching conversations:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -386,7 +403,7 @@ const Admin = () => {
         </h1>
 
         <Tabs defaultValue="add" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-4xl">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-5xl">
             <TabsTrigger value="add" className="text-xs md:text-sm">
               <Plus className="w-4 h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">{editingBook ? "Modifier" : "Ajouter"}</span>
@@ -403,6 +420,10 @@ const Admin = () => {
             <TabsTrigger value="users" className="text-xs md:text-sm">
               <Users className="w-4 h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Utilisateurs</span>
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="text-xs md:text-sm">
+              <MessageSquare className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Messages</span>
             </TabsTrigger>
           </TabsList>
 
@@ -664,6 +685,78 @@ const Admin = () => {
                       ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestion des conversations ({conversations.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {conversations.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Aucune conversation</p>
+                ) : (
+                  <div className="space-y-4">
+                    {conversations.map((conv) => (
+                      <Card key={conv.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold">{conv.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {conv.profiles?.full_name || conv.profiles?.email}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Dernière mise à jour: {new Date(conv.updated_at).toLocaleString()}
+                              </p>
+                              <span
+                                className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium ${
+                                  conv.status === "open"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
+                                {conv.status === "open" ? "Ouvert" : "Fermé"}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/messages`)}
+                              >
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Voir
+                              </Button>
+                              <Button
+                                variant={conv.status === "open" ? "outline" : "default"}
+                                size="sm"
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("conversations")
+                                    .update({ status: conv.status === "open" ? "closed" : "open" })
+                                    .eq("id", conv.id);
+
+                                  if (!error) {
+                                    fetchConversations();
+                                    toast({
+                                      title: "Succès",
+                                      description: `Conversation ${conv.status === "open" ? "fermée" : "ouverte"}`,
+                                    });
+                                  }
+                                }}
+                              >
+                                {conv.status === "open" ? "Fermer" : "Ouvrir"}
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </CardContent>

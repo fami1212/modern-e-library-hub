@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import MyBooks from "./pages/MyBooks";
 import Favorites from "./pages/Favorites";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 import Statistics from "./pages/Statistics";
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/my-books" element={<MyBooks />} />
           <Route path="/favorites" element={<Favorites />} />
+          <Route path="/messages" element={<Messages />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
