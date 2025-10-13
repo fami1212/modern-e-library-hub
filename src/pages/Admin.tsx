@@ -257,6 +257,52 @@ const Admin = () => {
     }
   };
 
+  const handleToggleAdmin = async (userId: string, currentRoles: any[]) => {
+    const isCurrentlyAdmin = currentRoles.some(r => r.role === "admin");
+
+    try {
+      if (isCurrentlyAdmin) {
+        const adminRole = currentRoles.find(r => r.role === "admin");
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("id", adminRole.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Succès",
+          description: "Rôle admin retiré",
+        });
+      } else {
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: "admin" });
+
+        if (error) throw error;
+
+        toast({
+          title: "Succès",
+          description: "Rôle admin accordé",
+        });
+      }
+
+      // Refresh users
+      const { data } = await supabase
+        .from("profiles")
+        .select("*, user_roles (role, id)")
+        .order("created_at", { ascending: false });
+
+      if (data) setUsers(data);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -527,7 +573,7 @@ const Admin = () => {
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>Utilisateurs</CardTitle>
+                <CardTitle>Gestion des utilisateurs ({users.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {users.length === 0 ? (
@@ -538,29 +584,55 @@ const Admin = () => {
                       <TableRow>
                         <TableHead>Nom</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Rôle</TableHead>
+                        <TableHead>Rôles</TableHead>
                         <TableHead>Date d'inscription</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user: any) => (
-                        <TableRow key={user.id}>
-                          <TableCell>{user.full_name || "N/A"}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                user.user_roles?.some((r: any) => r.role === "admin")
-                                  ? "bg-accent/10 text-accent"
-                                  : "bg-secondary text-secondary-foreground"
-                              }`}
-                            >
-                              {user.user_roles?.some((r: any) => r.role === "admin") ? "Admin" : "Utilisateur"}
-                            </span>
-                          </TableCell>
-                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
+                      {users.map((user: any) => {
+                        const isAdmin = user.user_roles?.some((r: any) => r.role === "admin");
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">
+                              {user.full_name || <span className="text-muted-foreground italic">Non renseigné</span>}
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {user.user_roles?.map((r: any) => (
+                                  <span
+                                    key={r.role}
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      r.role === "admin"
+                                        ? "bg-primary/20 text-primary"
+                                        : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {r.role}
+                                  </span>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(user.created_at).toLocaleDateString("fr-FR", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant={isAdmin ? "destructive" : "outline"}
+                                size="sm"
+                                onClick={() => handleToggleAdmin(user.id, user.user_roles || [])}
+                              >
+                                {isAdmin ? "Retirer admin" : "Promouvoir admin"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
