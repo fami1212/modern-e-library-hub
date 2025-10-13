@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, User, Calendar, Hash, ArrowLeft } from "lucide-react";
+import { BookOpen, User, Calendar, Hash, ArrowLeft, FileText } from "lucide-react";
 import { z } from "zod";
 
 const BookDetail = () => {
@@ -199,6 +199,21 @@ const BookDetail = () => {
                 </Card>
               )}
             </div>
+
+            {book.pdf_url && (
+              <Card>
+                <CardContent className="pt-6">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open(book.pdf_url, "_blank")}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Lire le PDF
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="bg-gradient-to-br from-secondary to-secondary/50">
               <CardContent className="pt-6">

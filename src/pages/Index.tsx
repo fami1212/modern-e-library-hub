@@ -11,7 +11,10 @@ const Index = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [books, setBooks] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categories, setCategories] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,17 +61,45 @@ const Index = () => {
 
       if (!error && data) {
         setBooks(data);
+        
+        // Extract unique categories
+        const uniqueCategories = Array.from(
+          new Set(data.map((book: any) => book.category).filter(Boolean))
+        ) as string[];
+        setCategories(uniqueCategories);
       }
     };
 
     fetchBooks();
   }, []);
 
-  const filteredBooks = books.filter(
-    (book) =>
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("favorites")
+        .select("book_id")
+        .eq("user_id", user.id);
+
+      if (data) {
+        setFavorites(data.map((fav) => fav.book_id));
+      }
+    };
+
+    fetchFavorites();
+  }, [user]);
+
+  const filteredBooks = books.filter((book) => {
+    const matchesSearch =
       book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      book.author.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory =
+      selectedCategory === "all" || book.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,7 +137,7 @@ const Index = () => {
 
       {/* Search and Books */}
       <div className="container mx-auto px-4 py-12">
-        <div className="mb-8">
+        <div className="mb-8 space-y-4">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
@@ -117,6 +148,35 @@ const Index = () => {
               className="pl-10"
             />
           </div>
+
+          {/* Categories */}
+          {categories.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === "all"
+                    ? "bg-gradient-to-r from-primary to-accent text-white shadow-[var(--shadow-elegant)]"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                Toutes
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    selectedCategory === category
+                      ? "bg-gradient-to-r from-primary to-accent text-white shadow-[var(--shadow-elegant)]"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {filteredBooks.length === 0 ? (
@@ -133,6 +193,15 @@ const Index = () => {
                 author={book.author}
                 coverUrl={book.cover_url}
                 availableCopies={book.available_copies}
+                isFavorite={favorites.includes(book.id)}
+                userId={user?.id}
+                onFavoriteChange={(isFav) => {
+                  if (isFav) {
+                    setFavorites([...favorites, book.id]);
+                  } else {
+                    setFavorites(favorites.filter((id) => id !== book.id));
+                  }
+                }}
               />
             ))}
           </div>

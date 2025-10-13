@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
+import { BookOpen, LogOut, LayoutDashboard, User as UserIcon, Upload, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,9 +40,21 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
             </span>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {user ? (
               <>
+                <Button variant="ghost" asChild>
+                  <Link to="/my-books" className="flex items-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    <span className="hidden sm:inline">Publier</span>
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link to="/favorites" className="flex items-center gap-2">
+                    <Heart className="w-4 h-4" />
+                    <span className="hidden sm:inline">Favoris</span>
+                  </Link>
+                </Button>
                 {isAdmin && (
                   <Button variant="ghost" asChild>
                     <Link to="/admin" className="flex items-center gap-2">

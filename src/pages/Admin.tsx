@@ -9,7 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trash2, Edit, Plus } from "lucide-react";
+import { BookOpen, Trash2, Edit, Plus, Users, Library } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { z } from "zod";
 
 const bookSchema = z.object({
@@ -26,6 +34,8 @@ const Admin = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [books, setBooks] = useState<any[]>([]);
+  const [borrowings, setBorrowings] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [editingBook, setEditingBook] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -86,6 +96,39 @@ const Admin = () => {
 
     if (isAdmin) {
       fetchBooks();
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const fetchBorrowings = async () => {
+      const { data, error } = await supabase
+        .from("borrowings")
+        .select(`
+          *,
+          books (title, author),
+          profiles (email, full_name)
+        `)
+        .order("borrowed_at", { ascending: false });
+
+      if (!error && data) {
+        setBorrowings(data);
+      }
+    };
+
+    const fetchUsers = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*, user_roles (role)")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setUsers(data);
+      }
+    };
+
+    if (isAdmin) {
+      fetchBorrowings();
+      fetchUsers();
     }
   }, [isAdmin]);
 
@@ -228,14 +271,22 @@ const Admin = () => {
         </h1>
 
         <Tabs defaultValue="add" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-4xl grid-cols-4">
             <TabsTrigger value="add">
               <Plus className="w-4 h-4 mr-2" />
               {editingBook ? "Modifier" : "Ajouter"}
             </TabsTrigger>
             <TabsTrigger value="manage">
+              <Library className="w-4 h-4 mr-2" />
+              Livres
+            </TabsTrigger>
+            <TabsTrigger value="borrowings">
               <BookOpen className="w-4 h-4 mr-2" />
-              Gérer
+              Emprunts
+            </TabsTrigger>
+            <TabsTrigger value="users">
+              <Users className="w-4 h-4 mr-2" />
+              Utilisateurs
             </TabsTrigger>
           </TabsList>
 
@@ -415,6 +466,106 @@ const Admin = () => {
                 ))
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="borrowings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestion des emprunts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {borrowings.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Aucun emprunt</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Livre</TableHead>
+                        <TableHead>Utilisateur</TableHead>
+                        <TableHead>Date d'emprunt</TableHead>
+                        <TableHead>Date de retour prévue</TableHead>
+                        <TableHead>Statut</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {borrowings.map((borrowing: any) => (
+                        <TableRow key={borrowing.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{borrowing.books?.title}</p>
+                              <p className="text-sm text-muted-foreground">{borrowing.books?.author}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{borrowing.profiles?.full_name || "N/A"}</p>
+                              <p className="text-sm text-muted-foreground">{borrowing.profiles?.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{new Date(borrowing.borrowed_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(borrowing.due_date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                borrowing.status === "active"
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-secondary text-secondary-foreground"
+                              }`}
+                            >
+                              {borrowing.status === "active" ? "En cours" : "Retourné"}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>Utilisateurs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {users.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Aucun utilisateur</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nom</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Rôle</TableHead>
+                        <TableHead>Date d'inscription</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user: any) => (
+                        <TableRow key={user.id}>
+                          <TableCell>{user.full_name || "N/A"}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                user.user_roles?.some((r: any) => r.role === "admin")
+                                  ? "bg-accent/10 text-accent"
+                                  : "bg-secondary text-secondary-foreground"
+                              }`}
+                            >
+                              {user.user_roles?.some((r: any) => r.role === "admin") ? "Admin" : "Utilisateur"}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

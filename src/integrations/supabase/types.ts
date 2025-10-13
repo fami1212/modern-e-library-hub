@@ -24,6 +24,7 @@ export type Database = {
           description: string | null
           id: string
           isbn: string | null
+          pdf_url: string | null
           publication_year: number | null
           title: string
           total_copies: number
@@ -38,6 +39,7 @@ export type Database = {
           description?: string | null
           id?: string
           isbn?: string | null
+          pdf_url?: string | null
           publication_year?: number | null
           title: string
           total_copies?: number
@@ -52,6 +54,7 @@ export type Database = {
           description?: string | null
           id?: string
           isbn?: string | null
+          pdf_url?: string | null
           publication_year?: number | null
           title?: string
           total_copies?: number
@@ -93,6 +96,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "borrowings_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favorites: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_book_id_fkey"
             columns: ["book_id"]
             isOneToOne: false
             referencedRelation: "books"
