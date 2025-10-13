@@ -24,6 +24,7 @@ export type Database = {
           description: string | null
           id: string
           isbn: string | null
+          owner_id: string | null
           pdf_url: string | null
           publication_year: number | null
           title: string
@@ -39,6 +40,7 @@ export type Database = {
           description?: string | null
           id?: string
           isbn?: string | null
+          owner_id?: string | null
           pdf_url?: string | null
           publication_year?: number | null
           title: string
@@ -54,6 +56,7 @@ export type Database = {
           description?: string | null
           id?: string
           isbn?: string | null
+          owner_id?: string | null
           pdf_url?: string | null
           publication_year?: number | null
           title?: string
@@ -64,6 +67,7 @@ export type Database = {
       }
       borrowings: {
         Row: {
+          admin_validated: boolean | null
           book_id: string
           borrowed_at: string
           created_at: string
@@ -72,8 +76,11 @@ export type Database = {
           returned_at: string | null
           status: string
           user_id: string
+          validated_at: string | null
+          validated_by: string | null
         }
         Insert: {
+          admin_validated?: boolean | null
           book_id: string
           borrowed_at?: string
           created_at?: string
@@ -82,8 +89,11 @@ export type Database = {
           returned_at?: string | null
           status?: string
           user_id: string
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Update: {
+          admin_validated?: boolean | null
           book_id?: string
           borrowed_at?: string
           created_at?: string
@@ -92,6 +102,8 @@ export type Database = {
           returned_at?: string | null
           status?: string
           user_id?: string
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Relationships: [
           {

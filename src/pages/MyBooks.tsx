@@ -21,6 +21,7 @@ const bookSchema = z.object({
 const MyBooks = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [books, setBooks] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -55,6 +56,26 @@ const MyBooks = () => {
 
     checkAuth();
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchMyBooks = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setBooks(data);
+      }
+    };
+
+    if (user) {
+      fetchMyBooks();
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +143,7 @@ const MyBooks = () => {
         category: formData.category.trim() || null,
         cover_url: coverUrl,
         pdf_url: pdfUrl,
+        owner_id: user.id,
         total_copies: 1,
         available_copies: 1,
       };
@@ -147,7 +169,14 @@ const MyBooks = () => {
       setPdfFile(null);
       setCoverFile(null);
 
-      navigate("/");
+      // Refresh books list
+      const { data: updatedBooks } = await supabase
+        .from("books")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (updatedBooks) setBooks(updatedBooks);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -167,13 +196,14 @@ const MyBooks = () => {
       
       <div className="container mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Publier un livre
+          Mes livres publiés ({books.length})
         </h1>
 
-        <Card className="max-w-2xl shadow-[var(--shadow-card)]">
-          <CardHeader>
-            <CardTitle>Ajouter un nouveau livre</CardTitle>
-          </CardHeader>
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <Card className="shadow-[var(--shadow-card)]">
+            <CardHeader>
+              <CardTitle>Publier un nouveau livre</CardTitle>
+            </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -263,8 +293,49 @@ const MyBooks = () => {
                 {uploading ? "Publication en cours..." : "Publier le livre"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-[var(--shadow-card)]">
+            <CardHeader>
+              <CardTitle>Mes livres</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {books.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  Vous n'avez pas encore publié de livres
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {books.map((book) => (
+                    <div key={book.id} className="flex gap-4 p-4 rounded-lg border">
+                      <div className="w-16 h-20 rounded overflow-hidden bg-muted flex-shrink-0">
+                        {book.cover_url ? (
+                          <img
+                            src={book.cover_url}
+                            alt={book.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Upload className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{book.title}</h3>
+                        <p className="text-sm text-muted-foreground">{book.author}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {book.available_copies}/{book.total_copies} disponibles
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

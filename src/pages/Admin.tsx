@@ -287,13 +287,49 @@ const Admin = () => {
         });
       }
 
-      // Refresh users
       const { data } = await supabase
         .from("profiles")
         .select("*, user_roles (role, id)")
         .order("created_at", { ascending: false });
 
       if (data) setUsers(data);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleValidateBorrowing = async (borrowingId: string) => {
+    try {
+      const { error } = await supabase
+        .from("borrowings")
+        .update({
+          admin_validated: true,
+          validated_by: user?.id,
+          validated_at: new Date().toISOString(),
+        })
+        .eq("id", borrowingId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Emprunt validé",
+      });
+
+      const { data } = await supabase
+        .from("borrowings")
+        .select(`
+          *,
+          books (title, author),
+          profiles (email, full_name)
+        `)
+        .order("borrowed_at", { ascending: false });
+
+      if (data) setBorrowings(data);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -531,6 +567,8 @@ const Admin = () => {
                         <TableHead>Date d'emprunt</TableHead>
                         <TableHead>Date de retour prévue</TableHead>
                         <TableHead>Statut</TableHead>
+                        <TableHead>Validation</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -560,6 +598,28 @@ const Admin = () => {
                             >
                               {borrowing.status === "active" ? "En cours" : "Retourné"}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            {borrowing.admin_validated ? (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                Validé
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                En attente
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {!borrowing.admin_validated && borrowing.status === "active" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleValidateBorrowing(borrowing.id)}
+                              >
+                                Valider
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
