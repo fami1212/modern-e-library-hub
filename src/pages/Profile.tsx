@@ -154,9 +154,9 @@ const Profile = () => {
   };
 
   if (!user || !profile) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar user={user} isAdmin={isAdmin} />
+  return (
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
+      <Navbar user={user} isAdmin={isAdmin} />
         <div className="container mx-auto px-4 py-12">
           <p className="text-center text-muted-foreground">Chargement...</p>
         </div>

@@ -24,11 +24,14 @@ export const BookReviews = ({ bookId, userId }: BookReviewsProps) => {
   }, [bookId]);
 
   const fetchReviews = async () => {
+    console.log("Fetching reviews for book:", bookId);
     const { data, error } = await supabase
       .from("book_reviews")
       .select("*, profiles (full_name, email)")
       .eq("book_id", bookId)
       .order("created_at", { ascending: false });
+
+    console.log("Reviews data:", data, "Error:", error);
 
     if (!error && data) {
       setReviews(data);

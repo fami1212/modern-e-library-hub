@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, User, Calendar, Hash, ArrowLeft, FileText } from "lucide-react";
 import { BookReviews } from "@/components/BookReviews";
+import { BookRecommendations } from "@/components/BookRecommendations";
 
 const BookDetail = () => {
   const { id } = useParams();
@@ -133,7 +134,7 @@ const BookDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar user={user} isAdmin={isAdmin} />
       
       <div className="container mx-auto px-4 py-12">
@@ -142,8 +143,8 @@ const BookDetail = () => {
           Retour au catalogue
         </Button>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-[var(--shadow-elegant)]">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+          <div className="aspect-[3/4] max-h-[500px] rounded-lg overflow-hidden shadow-[var(--shadow-elegant)]">
             {book.cover_url ? (
               <img
                 src={book.cover_url}
@@ -157,12 +158,12 @@ const BookDetail = () => {
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <div>
-              <h1 className="text-4xl font-bold mb-2 text-foreground">{book.title}</h1>
+              <h1 className="text-2xl md:text-4xl font-bold mb-2 text-foreground">{book.title}</h1>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="w-5 h-5" />
-                <p className="text-xl">{book.author}</p>
+                <p className="text-lg md:text-xl">{book.author}</p>
               </div>
             </div>
 
@@ -203,14 +204,17 @@ const BookDetail = () => {
             {book.pdf_url && (
               <Card>
                 <CardContent className="pt-6">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open(book.pdf_url, "_blank")}
+                  <a
+                    href={book.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
                   >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Lire le PDF
-                  </Button>
+                    <Button variant="outline" className="w-full">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Lire le PDF
+                    </Button>
+                  </a>
                 </CardContent>
               </Card>
             )}
@@ -242,8 +246,13 @@ const BookDetail = () => {
           </div>
         </div>
 
-        <div className="mt-12">
+        <div className="mt-8 md:mt-12 space-y-8">
           <BookReviews bookId={book.id} userId={user?.id} />
+          <BookRecommendations 
+            currentBookId={book.id} 
+            category={book.category} 
+            author={book.author} 
+          />
         </div>
       </div>
     </div>

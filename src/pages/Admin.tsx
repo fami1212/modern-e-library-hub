@@ -377,31 +377,32 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar user={user} isAdmin={isAdmin} />
       
-      <div className="container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+      <div className="container mx-auto px-4 py-6 md:py-12">
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Panneau d'administration
         </h1>
 
         <Tabs defaultValue="add" className="space-y-6">
-          <TabsList className="grid w-full max-w-4xl grid-cols-4">
-            <TabsTrigger value="add">
-              <Plus className="w-4 h-4 mr-2" />
-              {editingBook ? "Modifier" : "Ajouter"}
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-4xl">
+            <TabsTrigger value="add" className="text-xs md:text-sm">
+              <Plus className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">{editingBook ? "Modifier" : "Ajouter"}</span>
+              <span className="sm:hidden">{editingBook ? "Édit" : "Add"}</span>
             </TabsTrigger>
-            <TabsTrigger value="manage">
-              <Library className="w-4 h-4 mr-2" />
-              Livres
+            <TabsTrigger value="manage" className="text-xs md:text-sm">
+              <Library className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Livres</span>
             </TabsTrigger>
-            <TabsTrigger value="borrowings">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Emprunts
+            <TabsTrigger value="borrowings" className="text-xs md:text-sm">
+              <BookOpen className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Emprunts</span>
             </TabsTrigger>
-            <TabsTrigger value="users">
-              <Users className="w-4 h-4 mr-2" />
-              Utilisateurs
+            <TabsTrigger value="users" className="text-xs md:text-sm">
+              <Users className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Utilisateurs</span>
             </TabsTrigger>
           </TabsList>
 
@@ -596,8 +597,9 @@ const Admin = () => {
                 {borrowings.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">Aucun emprunt</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                       <TableRow>
                         <TableHead>Livre</TableHead>
                         <TableHead>Utilisateur</TableHead>
@@ -660,8 +662,9 @@ const Admin = () => {
                           </TableCell>
                         </TableRow>
                       ))}
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -680,8 +683,9 @@ const Admin = () => {
                 {users.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">Aucun utilisateur</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                       <TableRow>
                         <TableHead>Nom</TableHead>
                         <TableHead>Email</TableHead>
@@ -734,8 +738,9 @@ const Admin = () => {
                           </TableRow>
                         );
                       })}
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

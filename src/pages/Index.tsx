@@ -102,11 +102,11 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar user={user} isAdmin={isAdmin} />
 
       {/* Hero Section */}
-      <div className="relative h-[400px] overflow-hidden">
+      <div className="relative h-[300px] md:h-[400px] overflow-hidden">
         <div className="absolute inset-0">
           <img
             src={heroImage}
@@ -117,16 +117,16 @@ const Index = () => {
         </div>
         <div className="relative container mx-auto px-4 h-full flex items-center">
           <div className="max-w-2xl">
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Bienvenue dans votre bibliothèque numérique
             </h1>
-            <p className="text-lg text-muted-foreground mb-6">
+            <p className="text-base md:text-lg text-muted-foreground mb-6">
               Découvrez, empruntez et gérez votre collection de livres en toute simplicité
             </p>
             {!user && (
               <button
                 onClick={() => navigate("/auth")}
-                className="px-8 py-3 rounded-lg bg-gradient-to-r from-primary to-accent text-white font-semibold hover:opacity-90 shadow-[var(--shadow-elegant)] transition-all"
+                className="px-6 md:px-8 py-2 md:py-3 rounded-lg bg-gradient-to-r from-primary to-accent text-white font-semibold hover:opacity-90 shadow-[var(--shadow-elegant)] transition-all"
               >
                 Commencer maintenant
               </button>
@@ -184,7 +184,7 @@ const Index = () => {
             <p className="text-muted-foreground text-lg">Aucun livre disponible pour le moment</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-6">
             {filteredBooks.map((book) => (
               <BookCard
                 key={book.id}
