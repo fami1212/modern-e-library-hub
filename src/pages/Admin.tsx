@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trash2, Edit, Plus, Users, Library } from "lucide-react";
+import { BookOpen, Trash2, Edit, Plus, Users, Library, Download } from "lucide-react";
+import { exportToCSV, exportToPDF } from "@/utils/exportUtils";
 import {
   Table,
   TableBody,
@@ -345,6 +346,32 @@ const Admin = () => {
     }
   };
 
+  const handleExportBorrowings = () => {
+    const exportData = borrowings.map((b) => ({
+      Livre: b.books?.title || "N/A",
+      Auteur: b.books?.author || "N/A",
+      Utilisateur: b.profiles?.full_name || b.profiles?.email || "N/A",
+      "Date d'emprunt": new Date(b.borrowed_at).toLocaleDateString(),
+      "Date de retour prévue": new Date(b.due_date).toLocaleDateString(),
+      Statut: b.status === "active" ? "En cours" : "Retourné",
+      Validé: b.admin_validated ? "Oui" : "Non",
+      "Amende (€)": b.fine_amount || 0,
+    }));
+
+    exportToCSV(exportData, "emprunts");
+  };
+
+  const handleExportUsers = () => {
+    const exportData = users.map((u) => ({
+      Nom: u.full_name || "Non renseigné",
+      Email: u.email,
+      Rôles: u.user_roles?.map((r: any) => r.role).join(", ") || "user",
+      "Date d'inscription": new Date(u.created_at).toLocaleDateString(),
+    }));
+
+    exportToCSV(exportData, "utilisateurs");
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -558,8 +585,12 @@ const Admin = () => {
 
           <TabsContent value="borrowings">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Gestion des emprunts</CardTitle>
+                <Button variant="outline" size="sm" onClick={handleExportBorrowings}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exporter CSV
+                </Button>
               </CardHeader>
               <CardContent>
                 {borrowings.length === 0 ? (
@@ -638,8 +669,12 @@ const Admin = () => {
 
           <TabsContent value="users">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Gestion des utilisateurs ({users.length})</CardTitle>
+                <Button variant="outline" size="sm" onClick={handleExportUsers}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exporter CSV
+                </Button>
               </CardHeader>
               <CardContent>
                 {users.length === 0 ? (

@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      book_reviews: {
+        Row: {
+          book_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_reviews_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books: {
         Row: {
           author: string
@@ -72,7 +110,11 @@ export type Database = {
           borrowed_at: string
           created_at: string
           due_date: string
+          extension_count: number | null
+          fine_amount: number | null
+          fine_paid: boolean | null
           id: string
+          max_extensions: number | null
           returned_at: string | null
           status: string
           user_id: string
@@ -85,7 +127,11 @@ export type Database = {
           borrowed_at?: string
           created_at?: string
           due_date: string
+          extension_count?: number | null
+          fine_amount?: number | null
+          fine_paid?: boolean | null
           id?: string
+          max_extensions?: number | null
           returned_at?: string | null
           status?: string
           user_id: string
@@ -98,7 +144,11 @@ export type Database = {
           borrowed_at?: string
           created_at?: string
           due_date?: string
+          extension_count?: number | null
+          fine_amount?: number | null
+          fine_paid?: boolean | null
           id?: string
+          max_extensions?: number | null
           returned_at?: string | null
           status?: string
           user_id?: string

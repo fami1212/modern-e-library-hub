@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, User, Calendar, Hash, ArrowLeft, FileText } from "lucide-react";
-import { z } from "zod";
+import { BookReviews } from "@/components/BookReviews";
 
 const BookDetail = () => {
   const { id } = useParams();
@@ -240,6 +240,10 @@ const BookDetail = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        <div className="mt-12">
+          <BookReviews bookId={book.id} userId={user?.id} />
         </div>
       </div>
     </div>

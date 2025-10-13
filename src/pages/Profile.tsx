@@ -5,7 +5,8 @@ import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { BorrowingExtension } from "@/components/BorrowingExtension";
 
 const Profile = () => {
   const [user, setUser] = useState<any>(null);
@@ -70,11 +71,26 @@ const Profile = () => {
 
   const handleReturn = async (borrowingId: string, bookId: string) => {
     try {
+      // Calculer l'amende si en retard
+      const borrowing = borrowings.find((b) => b.id === borrowingId);
+      let fineAmount = 0;
+
+      if (borrowing) {
+        const dueDate = new Date(borrowing.due_date);
+        const today = new Date();
+        const daysLate = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysLate > 0) {
+          fineAmount = daysLate * 0.5; // 0.50€ par jour de retard
+        }
+      }
+
       const { error: updateBorrowingError } = await supabase
         .from("borrowings")
         .update({
           returned_at: new Date().toISOString(),
           status: "returned",
+          fine_amount: fineAmount,
         })
         .eq("id", borrowingId);
 
@@ -97,12 +113,16 @@ const Profile = () => {
 
       toast({
         title: "Succès",
-        description: "Livre retourné avec succès",
+        description: fineAmount > 0 
+          ? `Livre retourné. Amende : ${fineAmount.toFixed(2)}€` 
+          : "Livre retourné avec succès",
       });
 
       setBorrowings(
         borrowings.map((b) =>
-          b.id === borrowingId ? { ...b, status: "returned", returned_at: new Date().toISOString() } : b
+          b.id === borrowingId 
+            ? { ...b, status: "returned", returned_at: new Date().toISOString(), fine_amount: fineAmount } 
+            : b
         )
       );
     } catch (error: any) {
@@ -112,6 +132,25 @@ const Profile = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const fetchBorrowings = async () => {
+    if (!user) return;
+
+    const { data: borrowingsData } = await supabase
+      .from("borrowings")
+      .select(`
+        *,
+        books (
+          title,
+          author,
+          cover_url
+        )
+      `)
+      .eq("user_id", user.id)
+      .order("borrowed_at", { ascending: false });
+
+    setBorrowings(borrowingsData || []);
   };
 
   if (!user || !profile) {
@@ -181,17 +220,42 @@ const Profile = () => {
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg mb-1">{borrowing.books?.title}</h3>
                             <p className="text-sm text-muted-foreground mb-2">{borrowing.books?.author}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                            <div className="flex items-center gap-2 text-sm mb-2">
                               <Calendar className="w-4 h-4" />
-                              <span>À retourner avant le {new Date(borrowing.due_date).toLocaleDateString()}</span>
+                              <span className={new Date(borrowing.due_date) < new Date() ? "text-red-500 font-medium" : "text-muted-foreground"}>
+                                À retourner avant le {new Date(borrowing.due_date).toLocaleDateString()}
+                              </span>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => handleReturn(borrowing.id, borrowing.book_id)}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Retourner le livre
-                            </Button>
+                            {new Date(borrowing.due_date) < new Date() && (
+                              <div className="flex items-center gap-2 text-sm text-red-500 mb-2">
+                                <AlertCircle className="w-4 h-4" />
+                                <span>En retard ! Amende : 0.50€/jour</span>
+                              </div>
+                            )}
+                            {!borrowing.admin_validated && (
+                              <div className="flex items-center gap-2 text-sm text-yellow-600 mb-2">
+                                <AlertCircle className="w-4 h-4" />
+                                <span>En attente de validation admin</span>
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleReturn(borrowing.id, borrowing.book_id)}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Retourner le livre
+                              </Button>
+                              {borrowing.admin_validated && (
+                                <BorrowingExtension
+                                  borrowingId={borrowing.id}
+                                  extensionCount={borrowing.extension_count || 0}
+                                  maxExtensions={borrowing.max_extensions || 2}
+                                  dueDate={borrowing.due_date}
+                                  onExtended={fetchBorrowings}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -231,10 +295,16 @@ const Profile = () => {
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg mb-1">{borrowing.books?.title}</h3>
                             <p className="text-sm text-muted-foreground mb-2">{borrowing.books?.author}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                               <CheckCircle className="w-4 h-4 text-green-500" />
                               <span>Retourné le {new Date(borrowing.returned_at).toLocaleDateString()}</span>
                             </div>
+                            {borrowing.fine_amount > 0 && (
+                              <div className="flex items-center gap-2 text-sm text-red-500">
+                                <AlertCircle className="w-4 h-4" />
+                                <span>Amende : {borrowing.fine_amount.toFixed(2)}€ {borrowing.fine_paid ? "(payée)" : "(non payée)"}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
