@@ -50,6 +50,8 @@ const Messages = () => {
 
   useEffect(() => {
     if (selectedConversation) {
+      // Persist selection for refresh
+      localStorage.setItem("lastConvId", selectedConversation.id);
       fetchMessages(selectedConversation.id);
       
       // Subscribe to new messages
@@ -93,6 +95,10 @@ const Messages = () => {
 
     if (!error && data) {
       setConversations(data);
+      // Auto-select last opened or first conversation for persistence
+      const lastConvId = localStorage.getItem("lastConvId");
+      const toSelect = data.find((c: any) => c.id === lastConvId) || data[0] || null;
+      if (toSelect) setSelectedConversation(toSelect);
     }
   };
 

@@ -97,7 +97,7 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t shadow-lg">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t shadow-lg pb-[env(safe-area-inset-bottom)] animate-fade-in">
         <div className="flex justify-around items-center py-2 px-2 overflow-x-auto">
           {user ? (
             <>
