@@ -131,6 +131,10 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
                 <UserIcon className="w-5 h-5" />
                 <span className="text-xs">Profil</span>
               </Link>
+              <button onClick={handleLogout} className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <LogOut className="w-5 h-5" />
+                <span className="text-xs">Sortir</span>
+              </button>
             </>
           ) : (
             <>
@@ -158,14 +162,7 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
               eLibrary
             </span>
           </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            {user && (
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+          <ThemeToggle />
         </div>
       </div>
     </>
