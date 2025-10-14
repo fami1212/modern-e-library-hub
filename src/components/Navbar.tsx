@@ -97,42 +97,55 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      {user && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t shadow-lg">
-          <div className="flex justify-around items-center py-2 px-2 overflow-x-auto">
-            <Link to="/" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-              <Home className="w-5 h-5" />
-              <span className="text-xs">Accueil</span>
-            </Link>
-            <Link to="/my-books" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-              <Upload className="w-5 h-5" />
-              <span className="text-xs">Publier</span>
-            </Link>
-            <Link to="/favorites" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-              <Heart className="w-5 h-5" />
-              <span className="text-xs">Favoris</span>
-            </Link>
-            <Link to="/statistics" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-              <BarChart3 className="w-5 h-5" />
-              <span className="text-xs">Stats</span>
-            </Link>
-            <Link to="/messages" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-              <MessageSquare className="w-5 h-5" />
-              <span className="text-xs">Messages</span>
-            </Link>
-            {isAdmin && (
-              <Link to="/admin" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-                <LayoutDashboard className="w-5 h-5" />
-                <span className="text-xs">Admin</span>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t shadow-lg">
+        <div className="flex justify-around items-center py-2 px-2 overflow-x-auto">
+          {user ? (
+            <>
+              <Link to="/" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <Home className="w-5 h-5" />
+                <span className="text-xs">Accueil</span>
               </Link>
-            )}
-            <Link to="/profile" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-              <UserIcon className="w-5 h-5" />
-              <span className="text-xs">Profil</span>
-            </Link>
-          </div>
-        </nav>
-      )}
+              <Link to="/my-books" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <Upload className="w-5 h-5" />
+                <span className="text-xs">Publier</span>
+              </Link>
+              <Link to="/favorites" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <Heart className="w-5 h-5" />
+                <span className="text-xs">Favoris</span>
+              </Link>
+              <Link to="/statistics" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <BarChart3 className="w-5 h-5" />
+                <span className="text-xs">Stats</span>
+              </Link>
+              <Link to="/messages" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <MessageSquare className="w-5 h-5" />
+                <span className="text-xs">Messages</span>
+              </Link>
+              {isAdmin && (
+                <Link to="/admin" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="text-xs">Admin</span>
+                </Link>
+              )}
+              <Link to="/profile" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <UserIcon className="w-5 h-5" />
+                <span className="text-xs">Profil</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <Home className="w-5 h-5" />
+                <span className="text-xs">Accueil</span>
+              </Link>
+              <Link to="/auth" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
+                <UserIcon className="w-5 h-5" />
+                <span className="text-xs">Connexion</span>
+              </Link>
+            </>
+          )}
+        </div>
+      </nav>
 
       {/* Mobile Top Bar */}
       <div className="md:hidden sticky top-0 z-40 bg-card border-b shadow-sm">
