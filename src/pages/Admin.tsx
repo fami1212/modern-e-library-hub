@@ -103,6 +103,7 @@ const Admin = () => {
 
   useEffect(() => {
     const fetchBorrowings = async () => {
+      console.log("Fetching borrowings...");
       const { data, error } = await supabase
         .from("borrowings")
         .select(`
@@ -112,25 +113,36 @@ const Admin = () => {
         `)
         .order("borrowed_at", { ascending: false });
 
-      if (!error && data) {
-        console.log("Borrowings fetched:", data);
-        setBorrowings(data);
-      } else if (error) {
+      if (error) {
         console.error("Error fetching borrowings:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les emprunts",
+          variant: "destructive",
+        });
+      } else {
+        console.log("Borrowings fetched successfully:", data);
+        setBorrowings(data || []);
       }
     };
 
     const fetchUsers = async () => {
+      console.log("Fetching users...");
       const { data, error } = await supabase
         .from("profiles")
         .select("*, user_roles (id, role)")
         .order("created_at", { ascending: false });
 
-      if (!error && data) {
-        console.log("Users fetched:", data);
-        setUsers(data);
-      } else if (error) {
+      if (error) {
         console.error("Error fetching users:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les utilisateurs",
+          variant: "destructive",
+        });
+      } else {
+        console.log("Users fetched successfully:", data);
+        setUsers(data || []);
       }
     };
 
@@ -139,7 +151,7 @@ const Admin = () => {
       fetchUsers();
       fetchConversations();
     }
-  }, [isAdmin]);
+  }, [isAdmin, toast]);
 
   const fetchConversations = async () => {
     const { data, error } = await supabase
