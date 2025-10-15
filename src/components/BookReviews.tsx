@@ -20,29 +20,65 @@ export const BookReviews = ({ bookId, userId }: BookReviewsProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchReviews();
+    if (bookId) {
+      fetchReviews();
+    }
   }, [bookId]);
 
   const fetchReviews = async () => {
-    console.log("Fetching reviews for book:", bookId);
-    const { data, error } = await supabase
-      .from("book_reviews")
-      .select("*, profiles (full_name, email)")
-      .eq("book_id", bookId)
-      .order("created_at", { ascending: false });
+    try {
+      console.log("Fetching reviews for book:", bookId);
+      const { data, error } = await supabase
+        .from("book_reviews")
+        .select("*")
+        .eq("book_id", bookId)
+        .order("created_at", { ascending: false });
 
-    console.log("Reviews data:", data, "Error:", error);
+      console.log("Reviews data:", data, "Error:", error);
 
-    if (!error && data) {
-      setReviews(data);
-      if (userId) {
-        const myReview = data.find((r) => r.user_id === userId);
+      if (error) {
+        console.error("Error fetching reviews:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les avis",
+          variant: "destructive",
+        });
+        setReviews([]);
+        return;
+      }
+
+      let enriched = data || [];
+      if (enriched.length > 0) {
+        const userIds = Array.from(new Set(enriched.map((r: any) => r.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+          if (!profilesError) {
+            const profilesById: Record<string, any> = Object.fromEntries(
+              (profilesData || []).map((p: any) => [p.id, p])
+            );
+            enriched = enriched.map((r: any) => ({
+              ...r,
+              profiles: profilesById[r.user_id] || null,
+            }));
+          }
+        }
+      }
+
+      setReviews(enriched);
+      if (userId && enriched) {
+        const myReview = enriched.find((r: any) => r.user_id === userId);
         if (myReview) {
           setUserReview(myReview);
           setRating(myReview.rating);
           setComment(myReview.comment || "");
         }
       }
+    } catch (error) {
+      console.error("Unexpected error fetching reviews:", error);
+      setReviews([]);
     }
   };
 

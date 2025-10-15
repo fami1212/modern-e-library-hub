@@ -22,24 +22,49 @@ const Messages = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          await supabase.auth.signOut();
+          navigate("/auth");
+          return;
+        }
+
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        setUser(session.user);
+
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id);
+        
+        setIsAdmin(roles?.some(r => r.role === "admin") ?? false);
+      } catch (error) {
+        console.error("Auth check error:", error);
         navigate("/auth");
-        return;
       }
-
-      setUser(session.user);
-
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-      
-      setIsAdmin(roles?.some(r => r.role === "admin") ?? false);
     };
 
     checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   useEffect(() => {
@@ -82,35 +107,80 @@ const Messages = () => {
   }, [messages]);
 
   const fetchConversations = async () => {
-    let query = supabase
-      .from("conversations")
-      .select("*, profiles (full_name, email)")
-      .order("updated_at", { ascending: false });
+    try {
+      let query = supabase
+        .from("conversations")
+        .select("*")
+        .order("updated_at", { ascending: false });
 
-    if (!isAdmin) {
-      query = query.eq("user_id", user.id);
-    }
+      if (!isAdmin && user?.id) {
+        query = query.eq("user_id", user.id);
+      }
 
-    const { data, error } = await query;
+      const { data, error } = await query;
 
-    if (!error && data) {
-      setConversations(data);
+      if (error) {
+        console.error("Error fetching conversations:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les conversations",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For les admins, hydrater les profils des utilisateurs liés aux conversations
+      let enrichedData = data || [];
+      if (isAdmin && enrichedData.length > 0) {
+        const userIds = Array.from(new Set(enrichedData.map((c: any) => c.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+          if (!profilesError) {
+            const profilesById: Record<string, any> = Object.fromEntries(
+              (profilesData || []).map((p: any) => [p.id, p])
+            );
+            enrichedData = enrichedData.map((c: any) => ({
+              ...c,
+              profiles: profilesById[c.user_id] || null,
+            }));
+          }
+        }
+      }
+
+      setConversations(enrichedData);
       // Auto-select last opened or first conversation for persistence
       const lastConvId = localStorage.getItem("lastConvId");
-      const toSelect = data.find((c: any) => c.id === lastConvId) || data[0] || null;
+      const toSelect = enrichedData.find((c: any) => c.id === lastConvId) || enrichedData[0] || null;
       if (toSelect) setSelectedConversation(toSelect);
+    } catch (error) {
+      console.error("Unexpected error fetching conversations:", error);
     }
   };
 
   const fetchMessages = async (conversationId: string) => {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*, profiles (full_name, email)")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
 
-    if (!error && data) {
-      setMessages(data);
+      if (error) {
+        console.error("Error fetching messages:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les messages",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setMessages(data || []);
+    } catch (error) {
+      console.error("Unexpected error fetching messages:", error);
     }
   };
 
