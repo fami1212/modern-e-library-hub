@@ -30,7 +30,7 @@ export const BookReviews = ({ bookId, userId }: BookReviewsProps) => {
       console.log("Fetching reviews for book:", bookId);
       const { data, error } = await supabase
         .from("book_reviews")
-        .select("*, profiles (full_name, email)")
+        .select("*")
         .eq("book_id", bookId)
         .order("created_at", { ascending: false });
 
@@ -47,9 +47,29 @@ export const BookReviews = ({ bookId, userId }: BookReviewsProps) => {
         return;
       }
 
-      setReviews(data || []);
-      if (userId && data) {
-        const myReview = data.find((r) => r.user_id === userId);
+      let enriched = data || [];
+      if (enriched.length > 0) {
+        const userIds = Array.from(new Set(enriched.map((r: any) => r.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+          if (!profilesError) {
+            const profilesById: Record<string, any> = Object.fromEntries(
+              (profilesData || []).map((p: any) => [p.id, p])
+            );
+            enriched = enriched.map((r: any) => ({
+              ...r,
+              profiles: profilesById[r.user_id] || null,
+            }));
+          }
+        }
+      }
+
+      setReviews(enriched);
+      if (userId && enriched) {
+        const myReview = enriched.find((r: any) => r.user_id === userId);
         if (myReview) {
           setUserReview(myReview);
           setRating(myReview.rating);

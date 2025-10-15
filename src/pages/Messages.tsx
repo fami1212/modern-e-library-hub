@@ -110,7 +110,7 @@ const Messages = () => {
     try {
       let query = supabase
         .from("conversations")
-        .select("*, profiles (full_name, email)")
+        .select("*")
         .order("updated_at", { ascending: false });
 
       if (!isAdmin && user?.id) {
@@ -129,10 +129,31 @@ const Messages = () => {
         return;
       }
 
-      setConversations(data || []);
+      // For les admins, hydrater les profils des utilisateurs liés aux conversations
+      let enrichedData = data || [];
+      if (isAdmin && enrichedData.length > 0) {
+        const userIds = Array.from(new Set(enrichedData.map((c: any) => c.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", userIds);
+          if (!profilesError) {
+            const profilesById: Record<string, any> = Object.fromEntries(
+              (profilesData || []).map((p: any) => [p.id, p])
+            );
+            enrichedData = enrichedData.map((c: any) => ({
+              ...c,
+              profiles: profilesById[c.user_id] || null,
+            }));
+          }
+        }
+      }
+
+      setConversations(enrichedData);
       // Auto-select last opened or first conversation for persistence
       const lastConvId = localStorage.getItem("lastConvId");
-      const toSelect = data?.find((c: any) => c.id === lastConvId) || data?.[0] || null;
+      const toSelect = enrichedData.find((c: any) => c.id === lastConvId) || enrichedData[0] || null;
       if (toSelect) setSelectedConversation(toSelect);
     } catch (error) {
       console.error("Unexpected error fetching conversations:", error);
@@ -143,7 +164,7 @@ const Messages = () => {
     try {
       const { data, error } = await supabase
         .from("messages")
-        .select("*, profiles (full_name, email)")
+        .select("*")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
