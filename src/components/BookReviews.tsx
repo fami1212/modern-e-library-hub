@@ -20,22 +20,35 @@ export const BookReviews = ({ bookId, userId }: BookReviewsProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchReviews();
+    if (bookId) {
+      fetchReviews();
+    }
   }, [bookId]);
 
   const fetchReviews = async () => {
-    console.log("Fetching reviews for book:", bookId);
-    const { data, error } = await supabase
-      .from("book_reviews")
-      .select("*, profiles (full_name, email)")
-      .eq("book_id", bookId)
-      .order("created_at", { ascending: false });
+    try {
+      console.log("Fetching reviews for book:", bookId);
+      const { data, error } = await supabase
+        .from("book_reviews")
+        .select("*, profiles (full_name, email)")
+        .eq("book_id", bookId)
+        .order("created_at", { ascending: false });
 
-    console.log("Reviews data:", data, "Error:", error);
+      console.log("Reviews data:", data, "Error:", error);
 
-    if (!error && data) {
-      setReviews(data);
-      if (userId) {
+      if (error) {
+        console.error("Error fetching reviews:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les avis",
+          variant: "destructive",
+        });
+        setReviews([]);
+        return;
+      }
+
+      setReviews(data || []);
+      if (userId && data) {
         const myReview = data.find((r) => r.user_id === userId);
         if (myReview) {
           setUserReview(myReview);
@@ -43,6 +56,9 @@ export const BookReviews = ({ bookId, userId }: BookReviewsProps) => {
           setComment(myReview.comment || "");
         }
       }
+    } catch (error) {
+      console.error("Unexpected error fetching reviews:", error);
+      setReviews([]);
     }
   };
 

@@ -54,34 +54,59 @@ const Admin = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          await supabase.auth.signOut();
+          navigate("/auth");
+          return;
+        }
+
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        setUser(session.user);
+
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id);
+        
+        const adminRole = roles?.some(r => r.role === "admin") ?? false;
+        setIsAdmin(adminRole);
+
+        if (!adminRole) {
+          toast({
+            title: "Accès refusé",
+            description: "Vous n'avez pas les permissions administrateur",
+            variant: "destructive",
+          });
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
         navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-      
-      const adminRole = roles?.some(r => r.role === "admin") ?? false;
-      setIsAdmin(adminRole);
-
-      if (!adminRole) {
-        toast({
-          title: "Accès refusé",
-          description: "Vous n'avez pas les permissions pour accéder à cette page",
-          variant: "destructive",
-        });
-        navigate("/");
       }
     };
 
     checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
   useEffect(() => {
