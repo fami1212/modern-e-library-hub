@@ -13,6 +13,7 @@ import Favorites from "./pages/Favorites";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 import Statistics from "./pages/Statistics";
+import ReadingStats from "./pages/ReadingStats";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/my-books" element={<MyBooks />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/reading-stats" element={<ReadingStats />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
