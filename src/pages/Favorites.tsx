@@ -71,7 +71,7 @@ const Favorites = () => {
         <div className="flex items-center gap-3 mb-8">
           <Heart className="w-8 h-8 fill-primary text-primary" />
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Mes favoris
+            Ma Wishlist
           </h1>
         </div>
 
@@ -79,10 +79,10 @@ const Favorites = () => {
           <div className="text-center py-16">
             <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground text-lg">
-              Vous n'avez pas encore de livres favoris
+              Votre wishlist est vide
             </p>
             <p className="text-muted-foreground text-sm mt-2">
-              Cliquez sur le cœur sur les livres pour les ajouter à vos favoris
+              Ajoutez des livres que vous souhaitez lire ou emprunter plus tard
             </p>
           </div>
         ) : (
