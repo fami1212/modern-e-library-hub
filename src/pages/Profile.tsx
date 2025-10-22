@@ -1,18 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Calendar, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle, AlertCircle, Camera, Upload } from "lucide-react";
 import { BorrowingExtension } from "@/components/BorrowingExtension";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 const Profile = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [borrowings, setBorrowings] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -153,10 +157,59 @@ const Profile = () => {
     setBorrowings(borrowingsData || []);
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile({ ...profile, avatar_url: publicUrl });
+      
+      toast({
+        title: "Succès",
+        description: "Photo de profil mise à jour",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de télécharger la photo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!user || !profile) {
-  return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <Navbar user={user} isAdmin={isAdmin} />
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-0">
+        <Navbar user={user} isAdmin={isAdmin} />
         <div className="container mx-auto px-4 py-12">
           <p className="text-center text-muted-foreground">Chargement...</p>
         </div>
@@ -173,18 +226,55 @@ const Profile = () => {
       
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
-          <Card className="mb-8 shadow-[var(--shadow-card)]">
-            <CardHeader>
-              <CardTitle className="text-2xl">Mon Profil</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Nom</p>
-                <p className="text-lg font-semibold">{profile.full_name || "Non renseigné"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="text-lg font-semibold">{profile.email}</p>
+          <Card className="mb-8 shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="h-32 bg-gradient-to-r from-primary/20 to-primary/10"></div>
+            <CardContent className="relative">
+              <div className="flex flex-col md:flex-row gap-6 -mt-16 md:-mt-20 pb-6">
+                <div className="flex flex-col items-center md:items-start">
+                  <div className="relative group">
+                    <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                      <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                      <AvatarFallback className="text-3xl bg-primary/10">
+                        {profile.full_name?.charAt(0)?.toUpperCase() || profile.email?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="absolute bottom-0 right-0 rounded-full h-10 w-10 p-0 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 pt-4 md:pt-16 space-y-4">
+                  <div>
+                    <h2 className="text-3xl font-bold">{profile.full_name || "Non renseigné"}</h2>
+                    <p className="text-muted-foreground flex items-center gap-2 mt-1">
+                      {profile.email}
+                    </p>
+                  </div>
+                  <div className="flex gap-4 pt-2">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">{activeBorrowings.length}</p>
+                      <p className="text-xs text-muted-foreground">Emprunts actifs</p>
+                    </div>
+                    <div className="border-l border-border"></div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">{borrowings.length}</p>
+                      <p className="text-xs text-muted-foreground">Total emprunts</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
