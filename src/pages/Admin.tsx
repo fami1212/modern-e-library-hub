@@ -133,8 +133,8 @@ const Admin = () => {
         .from("borrowings")
         .select(`
           *,
-          books (title, author),
-          profiles (email, full_name)
+          book_id (title, author),
+          user_id (email, full_name)
         `)
         .order("borrowed_at", { ascending: false });
 
@@ -155,7 +155,7 @@ const Admin = () => {
       console.log("Fetching users...");
       const { data, error } = await supabase
         .from("profiles")
-        .select("*, user_roles (id, role)")
+        .select("*, user_roles!fk_user_roles_user_profiles (id, role)")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -181,7 +181,7 @@ const Admin = () => {
   const fetchConversations = async () => {
     const { data, error } = await supabase
       .from("conversations")
-      .select("*, profiles (full_name, email)")
+      .select("*, user_id (full_name, email)")
       .order("updated_at", { ascending: false });
 
     console.log("Conversations fetched:", data, "Error:", error);
@@ -350,7 +350,7 @@ const Admin = () => {
 
       const { data } = await supabase
         .from("profiles")
-        .select("*, user_roles (role, id)")
+        .select("*, user_roles!fk_user_roles_user_profiles (role, id)")
         .order("created_at", { ascending: false });
 
       if (data) setUsers(data);
@@ -385,8 +385,8 @@ const Admin = () => {
         .from("borrowings")
         .select(`
           *,
-          books (title, author),
-          profiles (email, full_name)
+          book_id (title, author),
+          user_id (email, full_name)
         `)
         .order("borrowed_at", { ascending: false });
 
@@ -402,9 +402,9 @@ const Admin = () => {
 
   const handleExportBorrowings = () => {
     const exportData = borrowings.map((b) => ({
-      Livre: b.books?.title || "N/A",
-      Auteur: b.books?.author || "N/A",
-      Utilisateur: b.profiles?.full_name || b.profiles?.email || "N/A",
+      Livre: b.book_id?.title || "N/A",
+      Auteur: b.book_id?.author || "N/A",
+      Utilisateur: b.user_id?.full_name || b.user_id?.email || "N/A",
       "Date d'emprunt": new Date(b.borrowed_at).toLocaleDateString(),
       "Date de retour prévue": new Date(b.due_date).toLocaleDateString(),
       Statut: b.status === "active" ? "En cours" : "Retourné",
@@ -671,18 +671,18 @@ const Admin = () => {
                     <TableBody>
                       {borrowings.map((borrowing: any) => (
                         <TableRow key={borrowing.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{borrowing.books?.title}</p>
-                              <p className="text-sm text-muted-foreground">{borrowing.books?.author}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{borrowing.profiles?.full_name || "N/A"}</p>
-                              <p className="text-sm text-muted-foreground">{borrowing.profiles?.email}</p>
-                            </div>
-                          </TableCell>
+                           <TableCell>
+                             <div>
+                               <p className="font-medium">{borrowing.book_id?.title}</p>
+                               <p className="text-sm text-muted-foreground">{borrowing.book_id?.author}</p>
+                             </div>
+                           </TableCell>
+                           <TableCell>
+                             <div>
+                               <p className="font-medium">{borrowing.user_id?.full_name || "N/A"}</p>
+                               <p className="text-sm text-muted-foreground">{borrowing.user_id?.email}</p>
+                             </div>
+                           </TableCell>
                           <TableCell>{new Date(borrowing.borrowed_at).toLocaleDateString()}</TableCell>
                           <TableCell>{new Date(borrowing.due_date).toLocaleDateString()}</TableCell>
                           <TableCell>
@@ -744,9 +744,9 @@ const Admin = () => {
                           <div className="flex items-center justify-between">
                             <div>
                               <h3 className="font-semibold">{conv.title}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {conv.profiles?.full_name || conv.profiles?.email}
-                              </p>
+                               <p className="text-sm text-muted-foreground">
+                                 {conv.user_id?.full_name || conv.user_id?.email}
+                               </p>
                               <p className="text-xs text-muted-foreground">
                                 Dernière mise à jour: {new Date(conv.updated_at).toLocaleString()}
                               </p>
