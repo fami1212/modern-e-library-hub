@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Trash2, Edit, Plus, Users, Library, Download, MessageSquare } from "lucide-react";
-import { exportToCSV, exportToPDF } from "@/utils/exportUtils";
+import { exportToCSV } from "@/utils/exportUtils";
 import {
   Table,
   TableBody,
@@ -71,10 +71,15 @@ const Admin = () => {
 
         setUser(session.user);
 
-        const { data: roles } = await supabase
+        const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", session.user.id);
+        
+        if (rolesError) {
+          console.error("Error fetching roles:", rolesError);
+          return;
+        }
         
         const adminRole = roles?.some(r => r.role === "admin") ?? false;
         setIsAdmin(adminRole);
@@ -116,7 +121,14 @@ const Admin = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        console.error("Error fetching books:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les livres",
+          variant: "destructive",
+        });
+      } else if (data) {
         setBooks(data);
       }
     };
@@ -124,51 +136,93 @@ const Admin = () => {
     if (isAdmin) {
       fetchBooks();
     }
-  }, [isAdmin]);
+  }, [isAdmin, toast]);
 
   useEffect(() => {
     const fetchBorrowings = async () => {
       console.log("Fetching borrowings...");
-      const { data, error } = await supabase
+      
+      // Fetch borrowings with separate queries for related data
+      const { data: borrowingsData, error: borrowingsError } = await supabase
         .from("borrowings")
-        .select(`
-          *,
-          book_id (title, author),
-          user_id (email, full_name)
-        `)
+        .select("*")
         .order("borrowed_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching borrowings:", error);
+      if (borrowingsError) {
+        console.error("Error fetching borrowings:", borrowingsError);
         toast({
           title: "Erreur",
           description: "Impossible de charger les emprunts",
           variant: "destructive",
         });
-      } else {
-        console.log("Borrowings fetched successfully:", data);
-        setBorrowings(data || []);
+        return;
       }
+
+      if (!borrowingsData) {
+        setBorrowings([]);
+        return;
+      }
+
+      // Fetch books and profiles separately
+      const { data: booksData } = await supabase
+        .from("books")
+        .select("id, title, author")
+        .in("id", borrowingsData.map(b => b.book_id).filter(Boolean));
+
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", borrowingsData.map(b => b.user_id).filter(Boolean));
+
+      // Combine the data
+      const enrichedBorrowings = borrowingsData.map(borrowing => ({
+        ...borrowing,
+        book: booksData?.find(book => book.id === borrowing.book_id) || null,
+        user: profilesData?.find(profile => profile.id === borrowing.user_id) || null
+      }));
+
+      console.log("Borrowings fetched successfully:", enrichedBorrowings);
+      setBorrowings(enrichedBorrowings);
     };
 
     const fetchUsers = async () => {
       console.log("Fetching users...");
-      const { data, error } = await supabase
+      
+      // Fetch profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("*, user_roles!fk_user_roles_user_profiles (id, role)")
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching users:", error);
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
         toast({
           title: "Erreur",
           description: "Impossible de charger les utilisateurs",
           variant: "destructive",
         });
-      } else {
-        console.log("Users fetched successfully:", data);
-        setUsers(data || []);
+        return;
       }
+
+      if (!profilesData) {
+        setUsers([]);
+        return;
+      }
+
+      // Fetch roles separately
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("*")
+        .in("user_id", profilesData.map(p => p.id));
+
+      // Combine profiles with their roles
+      const usersWithRoles = profilesData.map(profile => ({
+        ...profile,
+        user_roles: rolesData?.filter(role => role.user_id === profile.id) || []
+      }));
+
+      console.log("Users fetched successfully:", usersWithRoles);
+      setUsers(usersWithRoles);
     };
 
     if (isAdmin) {
@@ -179,18 +233,42 @@ const Admin = () => {
   }, [isAdmin, toast]);
 
   const fetchConversations = async () => {
-    const { data, error } = await supabase
+    console.log("Fetching conversations...");
+    
+    const { data: conversationsData, error: conversationsError } = await supabase
       .from("conversations")
-      .select("*, user_id (full_name, email)")
+      .select("*")
       .order("updated_at", { ascending: false });
 
-    console.log("Conversations fetched:", data, "Error:", error);
-
-    if (!error && data) {
-      setConversations(data);
-    } else if (error) {
-      console.error("Error fetching conversations:", error);
+    if (conversationsError) {
+      console.error("Error fetching conversations:", conversationsError);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les conversations",
+        variant: "destructive",
+      });
+      return;
     }
+
+    if (!conversationsData) {
+      setConversations([]);
+      return;
+    }
+
+    // Fetch users for conversations
+    const { data: usersData } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", conversationsData.map(c => c.user_id).filter(Boolean));
+
+    // Combine conversations with user data
+    const enrichedConversations = conversationsData.map(conversation => ({
+      ...conversation,
+      user: usersData?.find(user => user.id === conversation.user_id) || null
+    }));
+
+    console.log("Conversations fetched successfully:", enrichedConversations);
+    setConversations(enrichedConversations);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -348,12 +426,23 @@ const Admin = () => {
         });
       }
 
-      const { data } = await supabase
+      // Refetch users to update the list
+      const { data: profilesData } = await supabase
         .from("profiles")
-        .select("*, user_roles!fk_user_roles_user_profiles (role, id)")
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (data) setUsers(data);
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("*");
+
+      if (profilesData) {
+        const usersWithRoles = profilesData.map(profile => ({
+          ...profile,
+          user_roles: rolesData?.filter(role => role.user_id === profile.id) || []
+        }));
+        setUsers(usersWithRoles);
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -381,16 +470,31 @@ const Admin = () => {
         description: "Emprunt validé",
       });
 
-      const { data } = await supabase
+      // Refetch borrowings to update the list
+      const { data: borrowingsData } = await supabase
         .from("borrowings")
-        .select(`
-          *,
-          book_id (title, author),
-          user_id (email, full_name)
-        `)
+        .select("*")
         .order("borrowed_at", { ascending: false });
 
-      if (data) setBorrowings(data);
+      if (borrowingsData) {
+        const { data: booksData } = await supabase
+          .from("books")
+          .select("id, title, author")
+          .in("id", borrowingsData.map(b => b.book_id).filter(Boolean));
+
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", borrowingsData.map(b => b.user_id).filter(Boolean));
+
+        const enrichedBorrowings = borrowingsData.map(borrowing => ({
+          ...borrowing,
+          book: booksData?.find(book => book.id === borrowing.book_id) || null,
+          user: profilesData?.find(profile => profile.id === borrowing.user_id) || null
+        }));
+
+        setBorrowings(enrichedBorrowings);
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -402,9 +506,9 @@ const Admin = () => {
 
   const handleExportBorrowings = () => {
     const exportData = borrowings.map((b) => ({
-      Livre: b.book_id?.title || "N/A",
-      Auteur: b.book_id?.author || "N/A",
-      Utilisateur: b.user_id?.full_name || b.user_id?.email || "N/A",
+      Livre: b.book?.title || "N/A",
+      Auteur: b.book?.author || "N/A",
+      Utilisateur: b.user?.full_name || b.user?.email || "N/A",
       "Date d'emprunt": new Date(b.borrowed_at).toLocaleDateString(),
       "Date de retour prévue": new Date(b.due_date).toLocaleDateString(),
       Statut: b.status === "active" ? "En cours" : "Retourné",
@@ -658,68 +762,68 @@ const Admin = () => {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                      <TableRow>
-                        <TableHead>Livre</TableHead>
-                        <TableHead>Utilisateur</TableHead>
-                        <TableHead>Date d'emprunt</TableHead>
-                        <TableHead>Date de retour prévue</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Validation</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {borrowings.map((borrowing: any) => (
-                        <TableRow key={borrowing.id}>
-                           <TableCell>
-                             <div>
-                               <p className="font-medium">{borrowing.book_id?.title}</p>
-                               <p className="text-sm text-muted-foreground">{borrowing.book_id?.author}</p>
-                             </div>
-                           </TableCell>
-                           <TableCell>
-                             <div>
-                               <p className="font-medium">{borrowing.user_id?.full_name || "N/A"}</p>
-                               <p className="text-sm text-muted-foreground">{borrowing.user_id?.email}</p>
-                             </div>
-                           </TableCell>
-                          <TableCell>{new Date(borrowing.borrowed_at).toLocaleDateString()}</TableCell>
-                          <TableCell>{new Date(borrowing.due_date).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                borrowing.status === "active"
-                                  ? "bg-primary/10 text-primary"
-                                  : "bg-secondary text-secondary-foreground"
-                              }`}
-                            >
-                              {borrowing.status === "active" ? "En cours" : "Retourné"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {borrowing.admin_validated ? (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                Validé
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                                En attente
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {!borrowing.admin_validated && borrowing.status === "active" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleValidateBorrowing(borrowing.id)}
-                              >
-                                Valider
-                              </Button>
-                            )}
-                          </TableCell>
+                        <TableRow>
+                          <TableHead>Livre</TableHead>
+                          <TableHead>Utilisateur</TableHead>
+                          <TableHead>Date d'emprunt</TableHead>
+                          <TableHead>Date de retour prévue</TableHead>
+                          <TableHead>Statut</TableHead>
+                          <TableHead>Validation</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
+                      </TableHeader>
+                      <TableBody>
+                        {borrowings.map((borrowing: any) => (
+                          <TableRow key={borrowing.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{borrowing.book?.title || "N/A"}</p>
+                                <p className="text-sm text-muted-foreground">{borrowing.book?.author || "N/A"}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{borrowing.user?.full_name || "N/A"}</p>
+                                <p className="text-sm text-muted-foreground">{borrowing.user?.email || "N/A"}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>{new Date(borrowing.borrowed_at).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(borrowing.due_date).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  borrowing.status === "active"
+                                    ? "bg-primary/10 text-primary"
+                                    : "bg-secondary text-secondary-foreground"
+                                }`}
+                              >
+                                {borrowing.status === "active" ? "En cours" : "Retourné"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {borrowing.admin_validated ? (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  Validé
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                  En attente
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {!borrowing.admin_validated && borrowing.status === "active" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleValidateBorrowing(borrowing.id)}
+                                >
+                                  Valider
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
@@ -744,9 +848,9 @@ const Admin = () => {
                           <div className="flex items-center justify-between">
                             <div>
                               <h3 className="font-semibold">{conv.title}</h3>
-                               <p className="text-sm text-muted-foreground">
-                                 {conv.user_id?.full_name || conv.user_id?.email}
-                               </p>
+                              <p className="text-sm text-muted-foreground">
+                                {conv.user?.full_name || conv.user?.email || "Utilisateur inconnu"}
+                              </p>
                               <p className="text-xs text-muted-foreground">
                                 Dernière mise à jour: {new Date(conv.updated_at).toLocaleString()}
                               </p>
@@ -816,58 +920,58 @@ const Admin = () => {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                      <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Rôles</TableHead>
-                        <TableHead>Date d'inscription</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((user: any) => {
-                        const isAdmin = user.user_roles?.some((r: any) => r.role === "admin");
-                        return (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">
-                              {user.full_name || <span className="text-muted-foreground italic">Non renseigné</span>}
-                            </TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {user.user_roles?.map((r: any) => (
-                                  <span
-                                    key={r.role}
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      r.role === "admin"
-                                        ? "bg-primary/20 text-primary"
-                                        : "bg-muted text-muted-foreground"
-                                    }`}
-                                  >
-                                    {r.role}
-                                  </span>
-                                ))}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {new Date(user.created_at).toLocaleDateString("fr-FR", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant={isAdmin ? "destructive" : "outline"}
-                                size="sm"
-                                onClick={() => handleToggleAdmin(user.id, user.user_roles || [])}
-                              >
-                                {isAdmin ? "Retirer admin" : "Promouvoir admin"}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                        <TableRow>
+                          <TableHead>Nom</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Rôles</TableHead>
+                          <TableHead>Date d'inscription</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user: any) => {
+                          const isAdmin = user.user_roles?.some((r: any) => r.role === "admin");
+                          return (
+                            <TableRow key={user.id}>
+                              <TableCell className="font-medium">
+                                {user.full_name || <span className="text-muted-foreground italic">Non renseigné</span>}
+                              </TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  {user.user_roles?.map((r: any) => (
+                                    <span
+                                      key={r.role}
+                                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        r.role === "admin"
+                                          ? "bg-primary/20 text-primary"
+                                          : "bg-muted text-muted-foreground"
+                                      }`}
+                                    >
+                                      {r.role}
+                                    </span>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(user.created_at).toLocaleDateString("fr-FR", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant={isAdmin ? "destructive" : "outline"}
+                                  size="sm"
+                                  onClick={() => handleToggleAdmin(user.id, user.user_roles || [])}
+                                >
+                                  {isAdmin ? "Retirer admin" : "Promouvoir admin"}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
