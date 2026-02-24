@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trash2, Edit, Plus, Users, Library, Download, MessageSquare } from "lucide-react";
+import { BookOpen, Trash2, Edit, Plus, Users, Library, Download, MessageSquare, RotateCcw, CheckCircle, DollarSign, AlertTriangle } from "lucide-react";
 import { exportToCSV } from "@/utils/exportUtils";
 import {
   Table,
@@ -452,6 +452,31 @@ const Admin = () => {
     }
   };
 
+  const refetchBorrowings = async () => {
+    const { data: borrowingsData } = await supabase
+      .from("borrowings")
+      .select("*")
+      .order("borrowed_at", { ascending: false });
+
+    if (!borrowingsData) { setBorrowings([]); return; }
+
+    const { data: booksData } = await supabase
+      .from("books")
+      .select("id, title, author")
+      .in("id", borrowingsData.map(b => b.book_id).filter(Boolean));
+
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", borrowingsData.map(b => b.user_id).filter(Boolean));
+
+    setBorrowings(borrowingsData.map(borrowing => ({
+      ...borrowing,
+      book: booksData?.find(book => book.id === borrowing.book_id) || null,
+      user: profilesData?.find(profile => profile.id === borrowing.user_id) || null
+    })));
+  };
+
   const handleValidateBorrowing = async (borrowingId: string) => {
     try {
       const { error } = await supabase
@@ -462,45 +487,93 @@ const Admin = () => {
           validated_at: new Date().toISOString(),
         })
         .eq("id", borrowingId);
+      if (error) throw error;
+      toast({ title: "Succès", description: "Emprunt validé" });
+      await refetchBorrowings();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
 
+  const handleReturnBook = async (borrowing: any) => {
+    if (!confirm("Confirmer le retour de ce livre ?")) return;
+    try {
+      // Update borrowing status
+      const { error } = await supabase
+        .from("borrowings")
+        .update({
+          status: "returned",
+          returned_at: new Date().toISOString(),
+        })
+        .eq("id", borrowing.id);
       if (error) throw error;
 
-      toast({
-        title: "Succès",
-        description: "Emprunt validé",
-      });
-
-      // Refetch borrowings to update the list
-      const { data: borrowingsData } = await supabase
-        .from("borrowings")
-        .select("*")
-        .order("borrowed_at", { ascending: false });
-
-      if (borrowingsData) {
-        const { data: booksData } = await supabase
+      // Increment available copies
+      if (borrowing.book_id) {
+        const { data: bookData } = await supabase
           .from("books")
-          .select("id, title, author")
-          .in("id", borrowingsData.map(b => b.book_id).filter(Boolean));
+          .select("available_copies")
+          .eq("id", borrowing.book_id)
+          .single();
 
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, email, full_name")
-          .in("id", borrowingsData.map(b => b.user_id).filter(Boolean));
-
-        const enrichedBorrowings = borrowingsData.map(borrowing => ({
-          ...borrowing,
-          book: booksData?.find(book => book.id === borrowing.book_id) || null,
-          user: profilesData?.find(profile => profile.id === borrowing.user_id) || null
-        }));
-
-        setBorrowings(enrichedBorrowings);
+        if (bookData) {
+          await supabase
+            .from("books")
+            .update({ available_copies: bookData.available_copies + 1 })
+            .eq("id", borrowing.book_id);
+        }
       }
+
+      // Calculate fine if overdue
+      const dueDate = new Date(borrowing.due_date);
+      const now = new Date();
+      if (now > dueDate) {
+        const daysLate = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const fineAmount = daysLate * 0.5; // 0.50€ par jour de retard
+        await supabase
+          .from("borrowings")
+          .update({ fine_amount: fineAmount })
+          .eq("id", borrowing.id);
+        toast({
+          title: "Livre retourné avec retard",
+          description: `Amende de ${fineAmount.toFixed(2)}€ (${daysLate} jours de retard)`,
+        });
+      } else {
+        toast({ title: "Succès", description: "Livre retourné avec succès" });
+      }
+
+      await refetchBorrowings();
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleMarkFinePaid = async (borrowingId: string) => {
+    try {
+      const { error } = await supabase
+        .from("borrowings")
+        .update({ fine_paid: true })
+        .eq("id", borrowingId);
+      if (error) throw error;
+      toast({ title: "Succès", description: "Amende marquée comme payée" });
+      await refetchBorrowings();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteBorrowing = async (borrowingId: string) => {
+    if (!confirm("Supprimer définitivement cet emprunt ?")) return;
+    try {
+      const { error } = await supabase
+        .from("borrowings")
+        .delete()
+        .eq("id", borrowingId);
+      if (error) throw error;
+      toast({ title: "Succès", description: "Emprunt supprimé" });
+      await refetchBorrowings();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     }
   };
 
@@ -763,12 +836,13 @@ const Admin = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Livre</TableHead>
+                         <TableHead>Livre</TableHead>
                           <TableHead>Utilisateur</TableHead>
-                          <TableHead>Date d'emprunt</TableHead>
-                          <TableHead>Date de retour prévue</TableHead>
+                          <TableHead>Emprunt</TableHead>
+                          <TableHead>Retour prévu</TableHead>
                           <TableHead>Statut</TableHead>
                           <TableHead>Validation</TableHead>
+                          <TableHead>Amende</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -788,39 +862,74 @@ const Admin = () => {
                               </div>
                             </TableCell>
                             <TableCell>{new Date(borrowing.borrowed_at).toLocaleDateString()}</TableCell>
-                            <TableCell>{new Date(borrowing.due_date).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p>{new Date(borrowing.due_date).toLocaleDateString()}</p>
+                                {borrowing.status === "active" && new Date(borrowing.due_date) < new Date() && (
+                                  <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                                    <AlertTriangle className="w-3 h-3" /> En retard
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   borrowing.status === "active"
-                                    ? "bg-primary/10 text-primary"
+                                    ? new Date(borrowing.due_date) < new Date()
+                                      ? "bg-destructive/10 text-destructive"
+                                      : "bg-primary/10 text-primary"
                                     : "bg-secondary text-secondary-foreground"
                                 }`}
                               >
-                                {borrowing.status === "active" ? "En cours" : "Retourné"}
+                                {borrowing.status === "active" 
+                                  ? (new Date(borrowing.due_date) < new Date() ? "En retard" : "En cours") 
+                                  : "Retourné"}
                               </span>
                             </TableCell>
                             <TableCell>
                               {borrowing.admin_validated ? (
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  Validé
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-accent/20 text-accent-foreground">
+                                  ✓ Validé
                                 </span>
                               ) : (
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
                                   En attente
                                 </span>
                               )}
                             </TableCell>
                             <TableCell>
-                              {!borrowing.admin_validated && borrowing.status === "active" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleValidateBorrowing(borrowing.id)}
-                                >
-                                  Valider
-                                </Button>
+                              {borrowing.fine_amount > 0 ? (
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-destructive">{Number(borrowing.fine_amount).toFixed(2)}€</p>
+                                  {borrowing.fine_paid ? (
+                                    <span className="px-2 py-0.5 rounded-full text-xs bg-accent/20 text-accent-foreground">Payée</span>
+                                  ) : (
+                                    <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => handleMarkFinePaid(borrowing.id)}>
+                                      <DollarSign className="w-3 h-3 mr-1" /> Marquer payée
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1 flex-wrap">
+                                {!borrowing.admin_validated && borrowing.status === "active" && (
+                                  <Button size="sm" variant="outline" onClick={() => handleValidateBorrowing(borrowing.id)} title="Valider">
+                                    <CheckCircle className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {borrowing.status === "active" && (
+                                  <Button size="sm" variant="outline" onClick={() => handleReturnBook(borrowing)} title="Marquer comme retourné">
+                                    <RotateCcw className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteBorrowing(borrowing.id)} title="Supprimer">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
