@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Trash2, Edit, Plus, Users, Library, Download, MessageSquare, RotateCcw, CheckCircle, DollarSign, AlertTriangle } from "lucide-react";
+import { BookOpen, Trash2, Edit, Plus, Users, Library, Download, MessageSquare, RotateCcw, CheckCircle, DollarSign, AlertTriangle, BarChart3 } from "lucide-react";
+import { AdminDashboardCharts } from "@/components/AdminDashboardCharts";
 import { exportToCSV } from "@/utils/exportUtils";
 import {
   Table,
@@ -616,8 +617,12 @@ const Admin = () => {
           Panneau d'administration
         </h1>
 
-        <Tabs defaultValue="add" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-5xl">
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 max-w-5xl">
+            <TabsTrigger value="dashboard" className="text-xs md:text-sm">
+              <BarChart3 className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
             <TabsTrigger value="add" className="text-xs md:text-sm">
               <Plus className="w-4 h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">{editingBook ? "Modifier" : "Ajouter"}</span>
@@ -640,6 +645,10 @@ const Admin = () => {
               <span className="hidden sm:inline">Messages</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard">
+            <AdminDashboardCharts />
+          </TabsContent>
 
           <TabsContent value="add">
             <Card className="max-w-2xl shadow-[var(--shadow-card)]">
