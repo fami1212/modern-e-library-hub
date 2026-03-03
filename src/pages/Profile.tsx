@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Calendar, CheckCircle, AlertCircle, Camera, Upload } from "lucide-react";
 import { BorrowingExtension } from "@/components/BorrowingExtension";
+import { DueDateReminder } from "@/components/DueDateReminder";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 
@@ -223,6 +224,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar user={user} isAdmin={isAdmin} />
+      <DueDateReminder userId={user.id} />
       
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
