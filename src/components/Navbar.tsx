@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, LogOut, LayoutDashboard, User as UserIcon, Upload, Heart, BarChart3, Home, MessageSquare } from "lucide-react";
+import { BookOpen, LogOut, LayoutDashboard, User as UserIcon, Upload, Heart, Home, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./ThemeToggle";
@@ -42,18 +42,6 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
             <div className="flex items-center gap-2">
               {user ? (
                 <>
-                  <Button variant="ghost" asChild>
-                    <Link to="/statistics" className="flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Stats</span>
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" asChild>
-                    <Link to="/reading-stats" className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4" />
-                      <span className="hidden sm:inline">Lectures</span>
-                    </Link>
-                  </Button>
                   <Button variant="ghost" asChild>
                     <Link to="/my-books" className="flex items-center gap-2">
                       <Upload className="w-4 h-4" />
@@ -118,10 +106,6 @@ export const Navbar = ({ user, isAdmin }: NavbarProps) => {
               <Link to="/favorites" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
                 <Heart className="w-5 h-5" />
                 <span className="text-xs">Wishlist</span>
-              </Link>
-              <Link to="/statistics" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
-                <BarChart3 className="w-5 h-5" />
-                <span className="text-xs">Stats</span>
               </Link>
               <Link to="/messages" className="flex flex-col items-center gap-1 min-w-[60px] p-2">
                 <MessageSquare className="w-5 h-5" />
