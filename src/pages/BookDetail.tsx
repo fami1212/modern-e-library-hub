@@ -17,6 +17,7 @@ const BookDetail = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [book, setBook] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showPdf, setShowPdf] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -204,17 +205,26 @@ const BookDetail = () => {
             {book.pdf_url && (
               <Card>
                 <CardContent className="pt-6">
-                  <a
-                    href={book.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <Button variant="outline" className="w-full">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Lire le PDF
-                    </Button>
-                  </a>
+                  <Button variant="outline" className="w-full" onClick={() => setShowPdf(!showPdf)}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    {showPdf ? "Masquer le PDF" : "Lire le PDF"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {showPdf && book.pdf_url && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold">Lecteur PDF</span>
+                    <Button variant="ghost" size="sm" onClick={() => setShowPdf(false)}>Fermer</Button>
+                  </div>
+                  <iframe
+                    src={book.pdf_url}
+                    className="w-full h-[600px] rounded border"
+                    title="PDF viewer"
+                  />
                 </CardContent>
               </Card>
             )}
