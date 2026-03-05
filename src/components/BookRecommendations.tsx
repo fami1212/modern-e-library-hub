@@ -42,7 +42,10 @@ export const BookRecommendations = ({ currentBookId, category, author }: BookRec
           .limit(4 - data.length);
 
         if (moreBooks) {
-          setRecommendations([...data, ...moreBooks]);
+          const uniqueRecommendations = [...data, ...moreBooks].filter(
+            (book, index, arr) => arr.findIndex((b) => b.id === book.id) === index
+          );
+          setRecommendations(uniqueRecommendations.slice(0, 4));
         } else {
           setRecommendations(data);
         }
