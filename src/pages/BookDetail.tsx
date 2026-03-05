@@ -204,15 +204,34 @@ const BookDetail = () => {
 
             {book.pdf_url && (
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 space-y-3">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      const newWindow = window.open(book.pdf_url, '_blank');
+                      if (!newWindow) {
+                        // Fallback: download directly
+                        const link = document.createElement('a');
+                        link.href = book.pdf_url;
+                        link.target = '_blank';
+                        link.download = `${book.title}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    }}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Lire le PDF
+                  </Button>
                   <a
                     href={book.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    download={`${book.title}.pdf`}
+                    className="block"
                   >
-                    <Button variant="outline" className="w-full">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Lire le PDF
+                    <Button variant="ghost" className="w-full text-muted-foreground" size="sm">
+                      Télécharger le PDF
                     </Button>
                   </a>
                 </CardContent>
