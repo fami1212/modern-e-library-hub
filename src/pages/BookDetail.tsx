@@ -108,7 +108,7 @@ const BookDetail = () => {
 
       toast({
         title: "Succès",
-        description: "Livre emprunté avec succès ! À retourner avant le " + dueDate.toLocaleDateString(),
+        description: "Livre emprunté avec succès ! À retourner avant le " + dueDate.toLocaleDateString() + " Veuillez récupere le livre à l'adresse suivante : 123 Rue de la Bibliothèque, Paris.",
       });
 
       setBook({ ...book, available_copies: book.available_copies - 1 });
