@@ -337,6 +337,8 @@ const MyBooks = () => {
             </CardContent>
           </Card>
         </div>
+
+        <OwnerBorrowings ownerId={user.id} />
       </div>
     </div>
   );
