@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload } from "lucide-react";
+import { OwnerBorrowings } from "@/components/OwnerBorrowings";
 import { z } from "zod";
 
 const bookSchema = z.object({
@@ -336,6 +337,8 @@ const MyBooks = () => {
             </CardContent>
           </Card>
         </div>
+
+        <OwnerBorrowings ownerId={user.id} />
       </div>
     </div>
   );
